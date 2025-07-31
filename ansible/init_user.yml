@@ -1,0 +1,70 @@
+---
+- name: Init user
+  become_user: "jby"
+  hosts: all
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ http_proxy }}"
+    no_proxy: "{{ no_proxy }}"
+  vars:
+    http_proxy: "http://10.112.164.18:1027"
+    no_proxy: "localhost,127.0.0.1,::1"
+  
+  tasks:
+    - name: Ensure .ssh directory exists
+      file:
+        path: ~/.ssh
+        state: directory
+        mode: '0700'
+
+    - name: Copy authorized_keys
+      copy:
+        src: authorized_keys
+        dest: ~/.ssh/authorized_keys
+        mode: '0600'
+
+    - name: Copy bashlib
+      copy: 
+        src: bashlib.sh
+        dest: ~/bashlib.sh
+
+    - name: Replace alias in .bashrc
+      replace:
+        path: ~/.bashrc
+        regexp: "^alias ll='ls -alF'"
+        replace: "alias ll='ls -lhF'"
+    
+    - name: Setup proxy
+      blockinfile:
+        path: ~/.bashrc
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - PROXY CONFIG"
+        block: |
+          PROXY_URL="{{ http_proxy }}"
+          NO_PROXY="localhost,127.0.0.1,::1,*.cn"
+
+          # Enable proxy
+          proxy_on() {
+              export http_proxy="$PROXY_URL"
+              export https_proxy="$PROXY_URL"
+              export ftp_proxy="$PROXY_URL"
+              export no_proxy="$NO_PROXY"
+              echo "Proxy has been enabled."
+          }
+
+          # Disable proxy
+          proxy_off() {
+              unset http_proxy
+              unset https_proxy
+              unset ftp_proxy
+              unset no_proxy
+              echo "Proxy has been disabled."
+          }
+          proxy_on
+
+    - name: Config vimrc
+      get_url:
+        url: https://raw.githubusercontent.com/amix/vimrc/refs/heads/master/vimrcs/basic.vim
+        dest: ~/.vimrc
+        mode: '0644'
+    
+  

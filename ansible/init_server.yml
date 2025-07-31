@@ -1,0 +1,45 @@
+---
+- name: Init server
+  become: true
+  hosts: all
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ http_proxy }}"
+    no_proxy: "{{ no_proxy }}"
+  vars:
+    http_proxy: "http://10.112.164.18:1027"
+    no_proxy: "localhost,127.0.0.1,::1"
+
+  tasks:
+    - name: Download chsrc .deb package
+      get_url:
+        url: https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc_latest-1_amd64.deb
+        dest: /tmp/chsrc_latest-1_amd64.deb
+        mode: '0644'
+
+    - name: Install chsrc .deb package
+      apt:
+        deb: /tmp/chsrc_latest-1_amd64.deb
+        state: present
+
+    - name: Clean up downloaded .deb file (optional)
+      file:
+        path: /tmp/chsrc_latest-1_amd64.deb
+        state: absent
+
+    - name: Change apt sources
+      shell:
+        cmd: "chsrc set ubuntu huawei"
+
+    - name: Install common packages
+      package:
+        name:
+          - vim
+          - git
+          - htop
+          - tmux
+          - curl
+        state: present
+    
+    
+    
