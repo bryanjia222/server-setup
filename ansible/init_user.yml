@@ -61,6 +61,68 @@
           }
           proxy_on
 
+    - name: Setup custom PS1 prompt
+      blockinfile:
+        path: ~/.bashrc
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - CUSTOM PS1"
+        block: |
+          # Colors
+          BLACK='\[\e[0;30m\]'
+          BBLACK='\[\e[1;30m\]'
+          BGBLACK='\[\e[40m\]'
+          RED='\[\e[0;31m\]'
+          BRED='\[\e[1;31m\]'
+          BGRED='\[\e[41m\]'
+          GREEN='\[\e[0;32m\]'
+          BGREEN='\[\e[1;32m\]'
+          BGGREEN='\[\e[1;32m\]'
+          YELLOW='\[\e[0;33m\]'
+          BYELLOW='\[\e[1;33m\]'
+          BGYELLOW='\[\e[1;33m\]'
+          BLUE='\[\e[0;34m\]'
+          BBLUE='\[\e[1;34m\]'
+          BGBLUE='\[\e[1;34m\]'
+          MAGENTA='\[\e[0;35m\]'
+          BMAGENTA='\[\e[1;35m\]'
+          BGMAGENTA='\[\e[1;35m\]'
+          CYAN='\[\e[0;36m\]'
+          BCYAN='\[\e[1;36m\]'
+          BGCYAN='\[\e[1;36m\]'
+          WHITE='\[\e[0;37m\]'
+          BWHITE='\[\e[1;37m\]'
+          BGWHITE='\[\e[1;37m\]'
+
+          PROMPT_COMMAND=smile_prompt
+
+          function smile_prompt
+          {
+              if [ "$?" -eq "0" ]; then
+                  # Smiley
+                  SC="${GREEN}:)"
+              else
+                  # Frowney
+                  SC="${RED}:("
+              fi
+
+              if [ $UID -eq 0 ]; then
+                  # Root user color
+                  UC="${RED}"
+              else
+                  # Normal user color
+                  UC="${BWHITE}"
+              fi
+
+              # Hostname color
+              HC="${BYELLOW}"
+              # Regular color
+              RC="${BWHITE}"
+              # Default color
+              DF='\[\e[0m\]'
+
+              # Include Conda environment prompt
+              PS1="[${CONDA_PROMPT_MODIFIER}${UC}\u${RC}@${HC}\h ${RC}\W${DF}] ${SC}${DF} "
+          }
+
     - name: Config vimrc
       get_url:
         url: https://raw.githubusercontent.com/amix/vimrc/refs/heads/master/vimrcs/basic.vim
