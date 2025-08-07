@@ -1,5 +1,5 @@
 ---
-- name: Init server
+- name: Init server and setup chsrc auto-update
   become: true
   hosts: all
   environment:
@@ -9,27 +9,32 @@
   vars:
     http_proxy: "http://10.112.164.18:1027"
     no_proxy: "localhost,127.0.0.1,::1"
+    chsrc_url: "https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc_latest-1_amd64.deb"
+    chsrc_deb_path: "/tmp/chsrc_latest-1_amd64.deb"
+    chsrc_script_path: "/usr/local/bin/update_chsrc.sh"
+    chsrc_log_path: "/var/log/update_chsrc.log"
 
   tasks:
     - name: Download chsrc .deb package
       get_url:
-        url: https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc_latest-1_amd64.deb
-        dest: /tmp/chsrc_latest-1_amd64.deb
+        url: "{{ chsrc_url }}"
+        dest: "{{ chsrc_deb_path }}"
         mode: '0644'
 
     - name: Install chsrc .deb package
       apt:
-        deb: /tmp/chsrc_latest-1_amd64.deb
+        deb: "{{ chsrc_deb_path }}"
         state: present
 
-    - name: Clean up downloaded .deb file (optional)
+    - name: Clean up downloaded .deb file
       file:
-        path: /tmp/chsrc_latest-1_amd64.deb
+        path: "{{ chsrc_deb_path }}"
         state: absent
 
-    - name: Change apt sources
-      shell:
-        cmd: "chsrc set ubuntu huawei"
+    - name: Change apt sources to Huawei
+      shell: "chsrc set ubuntu huawei"
+      args:
+        warn: false
 
     - name: Install common packages
       package:
@@ -40,6 +45,24 @@
           - tmux
           - curl
         state: present
-    
-    
-    
+
+    - name: Create chsrc auto-update script
+      copy:
+        dest: "{{ chsrc_script_path }}"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          export http_proxy={{ http_proxy }}
+          export https_proxy={{ http_proxy }}
+          export no_proxy={{ no_proxy }}
+          wget -q -O "{{ chsrc_deb_path }}" "{{ chsrc_url }}"
+          apt install -y "{{ chsrc_deb_path }}"
+          rm -f "{{ chsrc_deb_path }}"
+
+    - name: Set up daily cron job to auto-update chsrc
+      cron:
+        name: "Daily chsrc auto-update"
+        user: root
+        minute: "0"
+        hour: "3"
+        job: "{{ chsrc_script_path }} >> {{ chsrc_log_path }} 2>&1"
